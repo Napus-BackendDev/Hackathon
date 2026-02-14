@@ -1,0 +1,55 @@
+const mongoose = require('mongoose');
+
+const PatientSchema = new mongoose.Schema({
+    id: { type: Number, required: true, unique: true },
+    name: { type: String, required: true },
+    mrn: String,
+    initial: String,
+    avatarColor: String,
+    age: Number,
+    gender: String,
+    department: String,
+    date: String,
+    status: String,
+    statusColor: String,
+    aiScore: Number,
+    aiLabel: String,
+    aiLabelColor: String,
+
+    // Medical Fields
+    an: String,
+    dob: String,
+    sex: String,
+    dateadm: String,
+    timeadm: String,
+    datedsc: String,
+    timedsc: String,
+    ageday: Number,
+    cc: String,
+    pi: String,
+    ph: String,
+    fh: String,
+    patient_examine: String,
+    br: String,
+    pr: String,
+    rr: String,
+    bp: String,
+    o2: String,
+    pre_diagnosis: String,
+    reason_for_admit: String,
+    treatment_plan: String,
+
+    pdx: String,
+    sdx1: String,
+    sdx2: String,
+    sdx3: String,
+    sdx4: String,
+    proc1: String,
+    drg: String,
+    rw: Number,
+    wtlos: Number,
+    adjrw: Number,
+    lengthofstay: Number
+}, { timestamps: true });
+
+module.exports = mongoose.model('Patient', PatientSchema);
