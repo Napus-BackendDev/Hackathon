@@ -1,0 +1,682 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Hackathon Backend API",
+    "version": "1.0.0",
+    "description": "Backend API สำหรับระบบบันทึกข้อมูลผู้ป่วยในโรงพยาบาล พร้อม MongoDB + Express",
+    "contact": {
+      "name": "API Support",
+      "email": "support@hackathon.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.hackathon.com",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    },
+    {
+      "name": "Patients",
+      "description": "Patient management endpoints"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["Health"],
+        "description": "Check if the API server is running",
+        "responses": {
+          "200": {
+            "description": "Server is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Hackathon API Server is running! 🚀"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endpoints": {
+                      "type": "object",
+                      "properties": {
+                        "patients": {
+                          "type": "string",
+                          "example": "/api/patients"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/patients": {
+      "get": {
+        "summary": "Get all patients",
+        "tags": ["Patients"],
+        "description": "Retrieve a list of all patients with optional filters",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "AN",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by Admission Number",
+            "example": "AN2024001234"
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by patient name (case-insensitive)",
+            "example": "สมชาย"
+          },
+          {
+            "in": "query",
+            "name": "pdx",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by Principal Diagnosis code",
+            "example": "I21.9"
+          },
+          {
+            "in": "query",
+            "name": "drg",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filter by DRG code",
+            "example": "280"
+          },
+          {
+            "in": "query",
+            "name": "dateadm",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Filter by admission date (>=)",
+            "example": "2024-02-01"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of patients retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "number",
+                      "example": 25
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Patient"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new patient",
+        "tags": ["Patients"],
+        "description": "Create a new patient record",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Patient created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/Patient"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error or duplicate AN"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/api/patients/stats/summary": {
+      "get": {
+        "summary": "Get patient statistics",
+        "tags": ["Patients"],
+        "description": "Get summary statistics",
+        "responses": {
+          "200": {
+            "description": "Statistics retrieved successfully"
+          }
+        }
+      }
+    },
+    "/api/patients/an/{an}": {
+      "get": {
+        "summary": "Get patient by AN",
+        "tags": ["Patients"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "an",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Admission Number",
+            "example": "AN2024001234"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient retrieved successfully"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    },
+    "/api/patients/{id}": {
+      "get": {
+        "summary": "Get patient by ID",
+        "tags": ["Patients"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Patient ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient retrieved successfully"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update patient",
+        "tags": ["Patients"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatientInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Patient updated successfully"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete patient",
+        "tags": ["Patients"],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Patient deleted successfully"
+          },
+          "404": {
+            "description": "Patient not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Patient": {
+        "type": "object",
+        "required": ["name", "AN", "dob", "sex", "dateadm"],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "507f1f77bcf86cd799439011"
+          },
+          "name": {
+            "type": "string",
+            "description": "ชื่อ-นามสกุลผู้ป่วย",
+            "example": "นายสมชาย ใจดี"
+          },
+          "AN": {
+            "type": "string",
+            "description": "Admission Number",
+            "example": "AN2024001234"
+          },
+          "dob": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of Birth",
+            "example": "1985-03-15"
+          },
+          "sex": {
+            "type": "string",
+            "enum": ["M", "F", "male", "female", "other"],
+            "example": "M"
+          },
+          "dateadm": {
+            "type": "string",
+            "format": "date",
+            "description": "Admission Date",
+            "example": "2024-02-14"
+          },
+          "timeadm": {
+            "type": "string",
+            "example": "14:30"
+          },
+          "datedsc": {
+            "type": "string",
+            "format": "date",
+            "description": "Discharge Date",
+            "example": "2024-02-20"
+          },
+          "timedsc": {
+            "type": "string",
+            "example": "10:00"
+          },
+          "age": {
+            "type": "number",
+            "example": 39
+          },
+          "ageday": {
+            "type": "number",
+            "example": 14235
+          },
+          "cc": {
+            "type": "string",
+            "description": "Chief Complaint",
+            "example": "Chest pain"
+          },
+          "pi": {
+            "type": "string",
+            "description": "Present Illness",
+            "example": "Patient presented with acute chest pain"
+          },
+          "ph": {
+            "type": "string",
+            "description": "Past History",
+            "example": "Hypertension for 5 years"
+          },
+          "fh": {
+            "type": "string",
+            "description": "Family History",
+            "example": "Father had MI"
+          },
+          "patient_examine": {
+            "type": "string",
+            "example": "Alert, conscious"
+          },
+          "bt": {
+            "type": "string",
+            "description": "Body Temperature",
+            "example": "37.2"
+          },
+          "pr": {
+            "type": "string",
+            "description": "Pulse Rate",
+            "example": "85"
+          },
+          "rr": {
+            "type": "string",
+            "description": "Respiratory Rate",
+            "example": "18"
+          },
+          "bp": {
+            "type": "string",
+            "description": "Blood Pressure",
+            "example": "130/85"
+          },
+          "o2": {
+            "type": "string",
+            "description": "Oxygen Saturation",
+            "example": "98"
+          },
+          "pre_diagnosis": {
+            "type": "string",
+            "example": "Acute coronary syndrome"
+          },
+          "reason_for_admit": {
+            "type": "string",
+            "example": "Chest pain evaluation"
+          },
+          "treatment_plan": {
+            "type": "string",
+            "example": "Cardiac monitoring"
+          },
+          "pdx": {
+            "type": "string",
+            "description": "Principal Diagnosis (ICD-10)",
+            "example": "I21.9"
+          },
+          "sdx1": {
+            "type": "string",
+            "example": "E11.9"
+          },
+          "sdx2": {
+            "type": "string"
+          },
+          "sdx3": {
+            "type": "string"
+          },
+          "sdx4": {
+            "type": "string"
+          },
+          "sdx5": {
+            "type": "string"
+          },
+          "sdx6": {
+            "type": "string"
+          },
+          "sdx7": {
+            "type": "string"
+          },
+          "sdx8": {
+            "type": "string"
+          },
+          "sdx9": {
+            "type": "string"
+          },
+          "sdx10": {
+            "type": "string"
+          },
+          "sdx11": {
+            "type": "string"
+          },
+          "sdx12": {
+            "type": "string"
+          },
+          "proc1": {
+            "type": "string",
+            "description": "Procedure Code (ICD-10-PCS)",
+            "example": "0BH17EZ"
+          },
+          "proc2": {
+            "type": "string"
+          },
+          "proc3": {
+            "type": "string"
+          },
+          "proc4": {
+            "type": "string"
+          },
+          "proc5": {
+            "type": "string"
+          },
+          "proc6": {
+            "type": "string"
+          },
+          "proc7": {
+            "type": "string"
+          },
+          "proc8": {
+            "type": "string"
+          },
+          "proc9": {
+            "type": "string"
+          },
+          "proc10": {
+            "type": "string"
+          },
+          "proc11": {
+            "type": "string"
+          },
+          "proc12": {
+            "type": "string"
+          },
+          "proc13": {
+            "type": "string"
+          },
+          "proc14": {
+            "type": "string"
+          },
+          "proc15": {
+            "type": "string"
+          },
+          "proc16": {
+            "type": "string"
+          },
+          "proc17": {
+            "type": "string"
+          },
+          "proc18": {
+            "type": "string"
+          },
+          "proc19": {
+            "type": "string"
+          },
+          "proc20": {
+            "type": "string"
+          },
+          "drg": {
+            "type": "string",
+            "description": "DRG Code",
+            "example": "280"
+          },
+          "rw": {
+            "type": "number",
+            "description": "Relative Weight",
+            "example": 1.5432
+          },
+          "wtlos": {
+            "type": "number",
+            "example": 5.5
+          },
+          "adjrw": {
+            "type": "number",
+            "example": 1.6234
+          },
+          "lengthofstay": {
+            "type": "number",
+            "description": "Length of Stay (days)",
+            "example": 5
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PatientInput": {
+        "type": "object",
+        "required": ["name", "AN", "dob", "sex", "dateadm"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "นายสมชาย ใจดี"
+          },
+          "AN": {
+            "type": "string",
+            "example": "AN2024001234"
+          },
+          "dob": {
+            "type": "string",
+            "format": "date",
+            "example": "1985-03-15"
+          },
+          "sex": {
+            "type": "string",
+            "enum": ["M", "F", "male", "female", "other"],
+            "example": "M"
+          },
+          "dateadm": {
+            "type": "string",
+            "format": "date",
+            "example": "2024-02-14"
+          },
+          "timeadm": {
+            "type": "string",
+            "example": "14:30"
+          },
+          "age": {
+            "type": "number",
+            "example": 39
+          },
+          "cc": {
+            "type": "string",
+            "example": "Chest pain"
+          },
+          "pi": {
+            "type": "string",
+            "example": "Patient presented with acute chest pain"
+          },
+          "bt": {
+            "type": "string",
+            "example": "37.2"
+          },
+          "pr": {
+            "type": "string",
+            "example": "85"
+          },
+          "rr": {
+            "type": "string",
+            "example": "18"
+          },
+          "bp": {
+            "type": "string",
+            "example": "130/85"
+          },
+          "o2": {
+            "type": "string",
+            "example": "98"
+          },
+          "pdx": {
+            "type": "string",
+            "example": "I21.9"
+          },
+          "sdx1": {
+            "type": "string",
+            "example": "E11.9"
+          },
+          "proc1": {
+            "type": "string",
+            "example": "0BH17EZ"
+          },
+          "drg": {
+            "type": "string",
+            "example": "280"
+          },
+          "rw": {
+            "type": "number",
+            "example": 1.5432
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Error message"
+          },
+          "error": {
+            "type": "string",
+            "example": "Detailed error description"
+          }
+        }
+      }
+    }
+  }
+}

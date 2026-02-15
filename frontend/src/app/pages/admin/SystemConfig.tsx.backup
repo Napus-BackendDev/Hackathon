@@ -1,0 +1,218 @@
+import React, { useState } from 'react';
+import { 
+  Settings, 
+  Shield, 
+  Lock, 
+  Cpu, 
+  Database, 
+  Bell, 
+  Save, 
+  RefreshCw, 
+  ToggleLeft, 
+  ToggleRight,
+  Sliders
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+export const SystemConfig = () => {
+  const [activeTab, setActiveTab] = useState('general');
+  const [aiConfidence, setAiConfidence] = useState(85);
+  const [autoAssignment, setAutoAssignment] = useState(true);
+
+  const handleSave = () => {
+    toast.success('System configuration saved successfully');
+  };
+
+  const TabButton = ({ id, label, icon: Icon }: { id: string, label: string, icon: any }) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${
+        activeTab === id 
+          ? 'bg-teal-50 text-teal-700 shadow-sm border border-teal-100' 
+          : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border border-transparent'
+      }`}
+    >
+      <Icon size={18} />
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex justify-between items-center">
+        <div>
+           <h1 className="text-2xl font-bold text-gray-900">System Configuration</h1>
+           <p className="text-gray-500 text-sm mt-1">Manage global settings, AI parameters, and security protocols.</p>
+        </div>
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2">
+            <RefreshCw size={16} />
+            Reset Defaults
+          </button>
+          <button 
+            onClick={handleSave}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 shadow-sm transition-colors flex items-center gap-2"
+          >
+            <Save size={16} />
+            Save Changes
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Settings Navigation */}
+        <div className="space-y-1">
+          <div className="px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider">Settings Group</div>
+          <TabButton id="general" label="General Settings" icon={Settings} />
+          <TabButton id="ai" label="AI & Automation" icon={Cpu} />
+          <TabButton id="security" label="Security & Access" icon={Shield} />
+          <TabButton id="notifications" label="Notifications" icon={Bell} />
+          <TabButton id="integrations" label="Integrations" icon={Database} />
+        </div>
+
+        {/* Settings Content */}
+        <div className="lg:col-span-3 space-y-6">
+          
+          {activeTab === 'general' && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Sliders size={20} className="text-teal-600" />
+                  Workflow Configuration
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="font-medium text-gray-900">Automatic Case Assignment</p>
+                      <p className="text-xs text-gray-500 mt-1">Automatically assign incoming cases to available coders based on specialization.</p>
+                    </div>
+                    <button 
+                      onClick={() => setAutoAssignment(!autoAssignment)}
+                      className={`text-2xl transition-colors ${autoAssignment ? 'text-teal-600' : 'text-gray-300'}`}
+                    >
+                      {autoAssignment ? <ToggleRight size={40} /> : <ToggleLeft size={40} />}
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="font-medium text-gray-900">Require Supervisor Sign-off</p>
+                      <p className="text-xs text-gray-500 mt-1">Flagged cases must be approved by a supervisor before finalization.</p>
+                    </div>
+                    <div className="text-teal-600">
+                      <ToggleRight size={40} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'ai' && (
+             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-8">
+               <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Cpu size={20} className="text-purple-600" />
+                  AI Model Parameters
+                </h3>
+                
+                <div className="space-y-6">
+                  <div className="border border-gray-200 rounded-lg p-6">
+                    <div className="flex justify-between mb-2">
+                      <label className="text-sm font-bold text-gray-700">Confidence Threshold</label>
+                      <span className="text-sm font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">{aiConfidence}%</span>
+                    </div>
+                    <input 
+                      type="range" 
+                      min="50" 
+                      max="99" 
+                      value={aiConfidence}
+                      onChange={(e) => setAiConfidence(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600" 
+                    />
+                    <p className="text-xs text-gray-500 mt-3">
+                      AI predictions below this confidence score will be automatically flagged for human review. 
+                      Higher values increase precision but may increase manual workload.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">ICD-10 Version</h4>
+                      <select className="w-full p-2 bg-gray-50 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                        <option>2024 Release (Active)</option>
+                        <option>2023 Release</option>
+                      </select>
+                    </div>
+                    <div className="p-4 border border-gray-200 rounded-lg">
+                      <h4 className="font-medium text-gray-900 mb-2">CPT Code Set</h4>
+                      <select className="w-full p-2 bg-gray-50 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-teal-500 outline-none">
+                        <option>2024 Standard</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+               </div>
+             </div>
+          )}
+
+          {activeTab === 'security' && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-8">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Shield size={20} className="text-emerald-600" />
+                  Security Policies
+                </h3>
+                
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="font-medium text-gray-900">Two-Factor Authentication (2FA)</p>
+                      <p className="text-xs text-gray-500 mt-1">Enforce 2FA for all user roles (SMS or Authenticator App).</p>
+                    </div>
+                    <div className="text-teal-600">
+                      <ToggleRight size={40} />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-100">
+                    <div>
+                      <p className="font-medium text-gray-900">Session Timeout</p>
+                      <p className="text-xs text-gray-500 mt-1">Automatically log out inactive users after 15 minutes.</p>
+                    </div>
+                    <div className="text-teal-600">
+                      <ToggleRight size={40} />
+                    </div>
+                  </div>
+
+                  <div className="p-4 border border-red-100 bg-red-50/50 rounded-lg mt-6">
+                    <h4 className="font-bold text-red-800 mb-2 flex items-center gap-2">
+                      <Lock size={16} />
+                      Emergency Lockdown
+                    </h4>
+                    <p className="text-sm text-red-700 mb-4">
+                      Temporarily disable all non-admin access to the system. Use only in case of security breach.
+                    </p>
+                    <button className="px-4 py-2 bg-red-600 text-white rounded text-sm font-bold hover:bg-red-700 transition-colors">
+                      Initiate Lockdown
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {(activeTab === 'notifications' || activeTab === 'integrations') && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                <Settings size={32} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Configuration Section</h3>
+              <p className="text-gray-500 mt-2">This configuration panel is currently under development.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,135 @@
+<svg width="1440" height="1024" viewBox="0 0 1440 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Color -->
+  <rect width="1440" height="1024" fill="#F9FAFB"/>
+  
+  <!-- Background Blobs -->
+  <g opacity="0.4" filter="url(#filter0_f)">
+    <circle cx="200" cy="200" r="300" fill="#CCFBF1"/>
+  </g>
+  <g opacity="0.4" filter="url(#filter1_f)">
+    <circle cx="1240" cy="824" r="300" fill="#DBEAFE"/>
+  </g>
+
+  <!-- Logo Area -->
+  <g transform="translate(720, 200)">
+    <!-- Logo Icon Placeholder -->
+    <rect x="-40" y="-120" width="80" height="80" rx="20" fill="white" filter="url(#filter_shadow)"/>
+    <path d="M-20 -100 L-20 -60 L0 -40 L20 -60 L20 -100" stroke="#0D9488" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Text -->
+    <text x="0" y="0" font-family="Inter, sans-serif" font-size="48" font-weight="800" text-anchor="middle" fill="#1E293B">
+      Next<tspan fill="#14B8A6">Med</tspan>
+    </text>
+    
+    <!-- Tagline Pill -->
+    <g transform="translate(0, 40)">
+      <rect x="-160" y="0" width="320" height="36" rx="18" fill="white" stroke="white" stroke-opacity="0.5"/>
+      <text x="0" y="24" font-family="Inter, sans-serif" font-size="14" font-weight="500" text-anchor="middle" fill="#64748B">
+        The Intelligent Trace. Clinical to Coding.
+      </text>
+    </g>
+  </g>
+
+  <!-- Cards Container -->
+  <g transform="translate(180, 400)">
+    
+    <!-- Card 1: Doctor -->
+    <g>
+      <!-- Card Bg -->
+      <rect width="340" height="320" rx="24" fill="white" filter="url(#filter_card_shadow)"/>
+      
+      <!-- Icon Box -->
+      <rect x="32" y="32" width="56" height="56" rx="16" fill="#0D9488"/>
+      <!-- Icon (Stethoscope-ish) -->
+      <path d="M50 60 C50 75 70 75 70 60 V50" stroke="white" stroke-width="3" fill="none" transform="translate(0,0)"/>
+      <circle cx="70" cy="50" r="3" fill="white"/>
+      <circle cx="50" cy="50" r="3" fill="white"/>
+
+      <!-- Text -->
+      <text x="32" y="130" font-family="Inter, sans-serif" font-size="24" font-weight="700" fill="#111827">Provider Portal</text>
+      <text x="32" y="160" font-family="Inter, sans-serif" font-size="16" font-weight="500" fill="#6B7280">
+        <tspan x="32" dy="0">Manage patient encounters,</tspan>
+        <tspan x="32" dy="24">clinical documentation, and</tspan>
+        <tspan x="32" dy="24">view coding status.</tspan>
+      </text>
+
+      <!-- Link -->
+      <g transform="translate(32, 260)">
+        <circle cx="4" cy="4" r="4" fill="#0D9488"/>
+        <text x="16" y="8" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#9CA3AF" letter-spacing="1">ACCESS PORTAL</text>
+      </g>
+    </g>
+
+    <!-- Card 2: Coder -->
+    <g transform="translate(380, 0)">
+      <rect width="340" height="320" rx="24" fill="white" filter="url(#filter_card_shadow)"/>
+      
+      <!-- Icon Box -->
+      <rect x="32" y="32" width="56" height="56" rx="16" fill="#4F46E5"/>
+      <!-- Icon (Keyboard-ish) -->
+      <rect x="48" y="52" width="24" height="16" rx="2" stroke="white" stroke-width="2" fill="none"/>
+      
+      <text x="32" y="130" font-family="Inter, sans-serif" font-size="24" font-weight="700" fill="#111827">Coder Workspace</text>
+      <text x="32" y="160" font-family="Inter, sans-serif" font-size="16" font-weight="500" fill="#6B7280">
+        <tspan x="32" dy="0">Advanced coding calculator,</tspan>
+        <tspan x="32" dy="24">compliance validation, and</tspan>
+        <tspan x="32" dy="24">automated case management.</tspan>
+      </text>
+
+      <g transform="translate(32, 260)">
+        <circle cx="4" cy="4" r="4" fill="#4F46E5"/>
+        <text x="16" y="8" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#9CA3AF" letter-spacing="1">ACCESS PORTAL</text>
+      </g>
+    </g>
+
+    <!-- Card 3: Patient -->
+    <g transform="translate(760, 0)">
+      <rect width="340" height="320" rx="24" fill="white" filter="url(#filter_card_shadow)"/>
+      
+      <!-- Icon Box -->
+      <rect x="32" y="32" width="56" height="56" rx="16" fill="#334155"/>
+      <!-- Icon (User-ish) -->
+      <circle cx="60" cy="52" r="6" stroke="white" stroke-width="2"/>
+      <path d="M48 70 Q60 58 72 70" stroke="white" stroke-width="2" fill="none"/>
+
+      <text x="32" y="130" font-family="Inter, sans-serif" font-size="24" font-weight="700" fill="#111827">Patient Access</text>
+      <text x="32" y="160" font-family="Inter, sans-serif" font-size="16" font-weight="500" fill="#6B7280">
+        <tspan x="32" dy="0">Securely view your medical</tspan>
+        <tspan x="32" dy="24">records, billing statements,</tspan>
+        <tspan x="32" dy="24">and appointment history.</tspan>
+      </text>
+
+      <g transform="translate(32, 260)">
+        <circle cx="4" cy="4" r="4" fill="#334155"/>
+        <text x="16" y="8" font-family="Inter, sans-serif" font-size="12" font-weight="700" fill="#9CA3AF" letter-spacing="1">ACCESS PORTAL</text>
+      </g>
+    </g>
+
+  </g>
+
+  <!-- Footer -->
+  <g transform="translate(720, 850)">
+    <text x="0" y="0" font-family="Inter, sans-serif" font-size="12" font-weight="500" text-anchor="middle" fill="#9CA3AF">HIPAA Compliant • SOC2 Certified • End-to-End Encrypted</text>
+    <text x="0" y="24" font-family="Inter, sans-serif" font-size="10" font-weight="400" text-anchor="middle" fill="#CBD5E1">© 2026 NextMed Systems. v2.4.0 (Beta)</text>
+  </g>
+
+  <!-- Definitions for Filters -->
+  <defs>
+    <filter id="filter0_f" x="-200" y="-200" width="800" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="60" result="effect1_foregroundBlur"/>
+    </filter>
+    <filter id="filter1_f" x="840" y="424" width="800" height="800" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape"/>
+      <feGaussianBlur stdDeviation="60" result="effect1_foregroundBlur"/>
+    </filter>
+    <filter id="filter_card_shadow" x="-4" y="-4" width="360" height="340" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="15" flood-color="#000000" flood-opacity="0.05"/>
+    </filter>
+    <filter id="filter_shadow" x="-50" y="-130" width="100" height="100" filterUnits="userSpaceOnUse">
+       <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#14B8A6" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+</svg>

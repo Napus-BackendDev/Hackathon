@@ -1,0 +1,539 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { 
+  ArrowLeft, 
+  Save, 
+  Calculator, 
+  Brain, 
+  Plus, 
+  Trash2, 
+  AlertTriangle, 
+  CheckCircle, 
+  Info, 
+  FileText,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Database,
+  RotateCcw
+} from 'lucide-react';
+import { clsx } from 'clsx';
+import { toast } from 'sonner';
+
+// --- Types ---
+
+interface CodingEntry {
+  id: string; // Internal ID for the row
+  patientId: string;
+  mrn: string;
+  principalDx: string;
+  secondaryDx: string[];
+  procedures: string[];
+  drg: string;
+  rw: number;
+  adjRw: number;
+  los: number;
+  expectedLos: number;
+  notes: string;
+  status: 'draft' | 'validated' | 'error';
+  validationMsg?: string;
+}
+
+// --- Mock Data Helper ---
+const MOCK_PATIENT_DB: Record<string, { name: string, mrn: string, admitDate: string }> = {
+  '1': { name: 'Eleanor Rigby', mrn: 'HN-99281', admitDate: '2024-10-10' },
+  '2': { name: 'Michael Chen', mrn: 'HN-99102', admitDate: '2024-10-12' },
+};
+
+export const CodingCalculation = () => {
+  const { id } = useParams(); // Patient ID from route
+  const navigate = useNavigate();
+
+  // --- State ---
+  
+  // The list of entries in the main table (The "Batch" or "Session")
+  const [entries, setEntries] = useState<CodingEntry[]>([]);
+  
+  // The "Calculator" Panel State (Working Area)
+  const [activeCalc, setActiveCalc] = useState<{
+    principalDx: string;
+    secondaryDx: string; // Text area input, comma separated
+    procedures: string; // Text area input, comma separated
+    drg: string;
+    rw: string;
+    adjRw: string;
+    los: string;
+  }>({
+    principalDx: '',
+    secondaryDx: '',
+    procedures: '',
+    drg: '',
+    rw: '',
+    adjRw: '',
+    los: ''
+  });
+
+  // Load initial patient if ID exists and not already in table
+  useEffect(() => {
+    if (id && MOCK_PATIENT_DB[id] && entries.length === 0) {
+      // Auto-populate a draft entry for the selected patient
+      const patient = MOCK_PATIENT_DB[id];
+      const newEntry: CodingEntry = {
+        id: Date.now().toString(),
+        patientId: id,
+        mrn: patient.mrn,
+        principalDx: 'J18.9', // Mock pre-fill
+        secondaryDx: ['I10', 'E11.9'],
+        procedures: [],
+        drg: '194',
+        rw: 1.2543,
+        adjRw: 1.3501,
+        los: 3,
+        expectedLos: 4.5,
+        notes: '',
+        status: 'draft',
+        validationMsg: 'LOS (3) < Expected (4.5)'
+      };
+      setEntries([newEntry]);
+      
+      // Also populate calculator
+      setActiveCalc({
+        principalDx: newEntry.principalDx,
+        secondaryDx: newEntry.secondaryDx.join(', '),
+        procedures: newEntry.procedures.join(', '),
+        drg: newEntry.drg,
+        rw: newEntry.rw.toString(),
+        adjRw: newEntry.adjRw.toString(),
+        los: newEntry.los.toString()
+      });
+    }
+  }, [id]);
+
+  // --- Logic ---
+
+  const handleCalcChange = (field: keyof typeof activeCalc, value: string) => {
+    setActiveCalc(prev => ({ ...prev, [field]: value }));
+  };
+
+  const calculateAI = () => {
+    // Mock AI Calculation Logic
+    toast.info("AI Recalculating based on inputs...");
+    setTimeout(() => {
+      // Simulate a change based on inputs
+      setActiveCalc(prev => ({
+        ...prev,
+        drg: prev.principalDx.includes('J') ? '194' : '000',
+        rw: '1.4500',
+        adjRw: '1.5500',
+        expectedLos: '4.8'
+      } as any)); // cast for quick mock
+      toast.success("AI values updated");
+    }, 800);
+  };
+
+  const resetCalculator = () => {
+    setActiveCalc({
+      principalDx: '',
+      secondaryDx: '',
+      procedures: '',
+      drg: '',
+      rw: '',
+      adjRw: '',
+      los: ''
+    });
+    toast.info("Calculator panel reset");
+  };
+
+  const updateTableFromCalc = () => {
+    if (entries.length === 0) return;
+    
+    // Update the first entry (assuming single patient focus for this workflow)
+    const updated = [...entries];
+    updated[0] = {
+      ...updated[0],
+      principalDx: activeCalc.principalDx,
+      secondaryDx: activeCalc.secondaryDx.split(',').map(s => s.trim()).filter(Boolean),
+      procedures: activeCalc.procedures.split(',').map(s => s.trim()).filter(Boolean),
+      drg: activeCalc.drg,
+      rw: parseFloat(activeCalc.rw) || 0,
+      adjRw: parseFloat(activeCalc.adjRw) || 0,
+      los: parseFloat(activeCalc.los) || 0
+    };
+    setEntries(updated);
+    toast.success("Table updated from calculator");
+  };
+
+  const handleTableCellChange = (entryId: string, field: keyof CodingEntry, value: any) => {
+    setEntries(prev => prev.map(entry => {
+      if (entry.id !== entryId) return entry;
+      return { ...entry, [field]: value };
+    }));
+  };
+
+  const finalizeEntries = () => {
+    // Validation check
+    const hasErrors = entries.some(e => !e.principalDx || !e.drg);
+    if (hasErrors) {
+      toast.error("Cannot finalize: Missing mandatory fields (Primary Dx or DRG).");
+      return;
+    }
+    
+    toast.success("Finalized entries submitted for billing.");
+    navigate('/coder/records');
+  };
+
+  return (
+    <div className="h-[calc(100vh-2rem)] flex flex-col bg-slate-700/30 overflow-hidden animate-fade-in font-sans">
+      
+      {/* Header */}
+      <header className="h-16 bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 flex items-center justify-between px-6 flex-shrink-0 z-20">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate('/coder/records')}
+            className="p-2 hover:bg-slate-700/50 rounded-lg text-slate-400 transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+              Coding Calculation & Entry
+              <span className="px-2 py-0.5 bg-indigo-500/20 text-indigo-400 text-[10px] rounded-full uppercase tracking-wider border border-indigo-500/30">Beta</span>
+            </h1>
+            <p className="text-xs text-slate-400">Manual entry and validation workspace</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 text-slate-300 hover:bg-slate-700/30 rounded-lg text-sm font-medium transition-colors shadow-sm">
+            <Save size={16} />
+            Save Draft
+          </button>
+          <button 
+            onClick={finalizeEntries}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded-lg text-sm font-bold shadow-sm transition-colors"
+          >
+            <CheckCircle size={16} />
+            Finalize Entry
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content: Split View (Top: Calculator, Bottom: Table) */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        
+        {/* 2️⃣ TOP SECTION: Calculation Panel */}
+        <div className="bg-slate-800/50 backdrop-blur-sm border-b border-slate-700/50 p-6 flex-shrink-0 shadow-sm z-10">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+              <Calculator size={16} className="text-blue-600" />
+              Coding Calculation Panel
+            </h2>
+            <div className="flex items-center gap-2">
+               <span className="text-xs text-slate-500 italic">AI Auto-Calculation Ready</span>
+               <button
+                 onClick={calculateAI}
+                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 text-xs font-bold rounded-lg border border-blue-500/30 hover:bg-blue-500/30 transition-colors"
+               >
+                 <Brain size={12} />
+                 Auto-Calculate
+               </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            {/* Column 1: Diagnosis */}
+            <div className="col-span-1 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Primary Diagnosis</label>
+                <input 
+                  type="text" 
+                  value={activeCalc.principalDx}
+                  onChange={(e) => handleCalcChange('principalDx', e.target.value)}
+                  className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-blue-500 outline-none"
+                  placeholder="e.g. J18.9"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Secondary Dx (Comma sep)</label>
+                <textarea 
+                  value={activeCalc.secondaryDx}
+                  onChange={(e) => handleCalcChange('secondaryDx', e.target.value)}
+                  className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-blue-500 outline-none h-20 resize-none"
+                  placeholder="e.g. I10, E11.9"
+                />
+              </div>
+            </div>
+
+            {/* Column 2: Procedures */}
+            <div className="col-span-1">
+               <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Procedures (Comma sep)</label>
+                <textarea 
+                  value={activeCalc.procedures}
+                  onChange={(e) => handleCalcChange('procedures', e.target.value)}
+                  className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-blue-500 outline-none h-[132px] resize-none"
+                  placeholder="e.g. 99223, 36415"
+                />
+            </div>
+
+            {/* Column 3: DRG & Weights */}
+            <div className="col-span-1 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">DRG Group</label>
+                <div className="relative">
+                   <input 
+                    type="text" 
+                    value={activeCalc.drg}
+                    onChange={(e) => handleCalcChange('drg', e.target.value)}
+                    className="w-full text-sm font-mono font-bold text-teal-400 border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 outline-none"
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">v41.0</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                 <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Relative Wt</label>
+                    <input 
+                      type="number" 
+                      value={activeCalc.rw}
+                      onChange={(e) => handleCalcChange('rw', e.target.value)}
+                      className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 outline-none"
+                    />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Adj RW</label>
+                    <input 
+                      type="number" 
+                      value={activeCalc.adjRw}
+                      onChange={(e) => handleCalcChange('adjRw', e.target.value)}
+                      className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 outline-none bg-blue-50/50"
+                    />
+                 </div>
+              </div>
+            </div>
+
+            {/* Column 4: LOS & Actions */}
+            <div className="col-span-1 flex flex-col justify-between">
+               <div>
+                  <label className="block text-xs font-semibold text-slate-400 uppercase mb-1">Length of Stay</label>
+                  <div className="relative">
+                    <input 
+                      type="number" 
+                      value={activeCalc.los}
+                      onChange={(e) => handleCalcChange('los', e.target.value)}
+                      className="w-full text-sm font-mono border border-slate-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 outline-none"
+                    />
+                    {entries[0]?.expectedLos && parseFloat(activeCalc.los) < entries[0].expectedLos && (
+                        <div className="absolute right-0 -bottom-5 text-[10px] text-orange-600 font-bold flex items-center gap-1">
+                            <AlertTriangle size={10} /> Below Exp ({entries[0].expectedLos})
+                        </div>
+                    )}
+                  </div>
+               </div>
+               
+               <div className="mt-4 flex gap-2">
+                 <button 
+                   onClick={resetCalculator}
+                   className="flex-1 py-2 bg-slate-800/50 backdrop-blur-sm text-slate-300 border border-slate-600 text-xs font-bold rounded-lg hover:bg-slate-700/30 transition-colors shadow-sm flex items-center justify-center gap-2"
+                   title="Clear all fields"
+                 >
+                   <RotateCcw size={14} />
+                   Reset
+                 </button>
+                 <button 
+                   onClick={updateTableFromCalc}
+                   className="flex-[2] py-2 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-black transition-colors shadow-sm flex items-center justify-center gap-2"
+                 >
+                   <ChevronDown size={14} />
+                   Update
+                 </button>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3️⃣ MAIN SECTION: Editable Coding Table */}
+        <div className="flex-1 bg-slate-700/30 p-6 overflow-hidden flex flex-col">
+           <div className="flex items-center justify-between mb-3">
+             <h2 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                <Database size={16} className="text-teal-600" />
+                Structured Coding Table
+             </h2>
+             <div className="flex items-center gap-2">
+                <button 
+                    onClick={() => {
+                        const newEntry: CodingEntry = {
+                            id: Date.now().toString(),
+                            patientId: '',
+                            mrn: '',
+                            principalDx: '',
+                            secondaryDx: [],
+                            procedures: [],
+                            drg: '',
+                            rw: 0,
+                            adjRw: 0,
+                            los: 0,
+                            expectedLos: 0,
+                            notes: '',
+                            status: 'draft'
+                        };
+                        setEntries([...entries, newEntry]);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 text-slate-400 text-xs font-bold rounded hover:bg-slate-700/30 transition-colors"
+                >
+                    <Plus size={14} /> Add Row
+                </button>
+             </div>
+           </div>
+
+           <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
+              <div className="overflow-auto flex-1">
+                 <table className="w-full text-left border-collapse min-w-[1000px]">
+                    <thead className="bg-slate-700/30 border-b border-slate-700/50 sticky top-0 z-10">
+                       <tr>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-32">Patient / MRN</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-24">Primary Dx</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Secondary Dx</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Procedures</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20">DRG</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20">RW</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20">Adj RW</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-20">LOS</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-40">Notes</th>
+                          <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider w-16 text-center">Action</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-700/50">
+                       {entries.map((entry) => (
+                          <tr key={entry.id} className="hover:bg-blue-500/200/20 transition-colors group">
+                             {/* Patient / MRN */}
+                             <td className="px-4 py-2">
+                                <input 
+                                   className="w-full text-xs font-medium bg-transparent outline-none placeholder-slate-500"
+                                   placeholder="MRN..."
+                                   value={entry.mrn}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'mrn', e.target.value)}
+                                />
+                             </td>
+                             
+                             {/* Primary Dx */}
+                             <td className={clsx("px-4 py-2 border-l border-slate-700", !entry.principalDx && "bg-red-500/20")}>
+                                <input 
+                                   className="w-full text-xs font-mono font-bold text-white bg-transparent outline-none"
+                                   value={entry.principalDx}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'principalDx', e.target.value)}
+                                />
+                             </td>
+
+                             {/* Secondary Dx */}
+                             <td className="px-4 py-2 border-l border-slate-700">
+                                <input 
+                                   className="w-full text-xs font-mono text-slate-400 bg-transparent outline-none"
+                                   value={entry.secondaryDx.join(', ')}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'secondaryDx', e.target.value.split(',').map(s=>s.trim()))}
+                                />
+                             </td>
+
+                             {/* Procedures */}
+                             <td className="px-4 py-2 border-l border-slate-700">
+                                <input 
+                                   className="w-full text-xs font-mono text-slate-400 bg-transparent outline-none"
+                                   value={entry.procedures.join(', ')}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'procedures', e.target.value.split(',').map(s=>s.trim()))}
+                                />
+                             </td>
+
+                             {/* DRG */}
+                             <td className={clsx("px-4 py-2 border-l border-slate-700", !entry.drg && "bg-red-500/20")}>
+                                <input 
+                                   className="w-full text-xs font-mono font-bold text-teal-400 bg-transparent outline-none"
+                                   value={entry.drg}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'drg', e.target.value)}
+                                />
+                             </td>
+
+                             {/* RW */}
+                             <td className="px-4 py-2 border-l border-slate-700">
+                                <input 
+                                   type="number"
+                                   className="w-full text-xs font-mono text-slate-300 bg-transparent outline-none"
+                                   value={entry.rw}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'rw', parseFloat(e.target.value))}
+                                />
+                             </td>
+
+                             {/* Adj RW */}
+                             <td className="px-4 py-2 border-l border-slate-700 bg-blue-500/20">
+                                <input 
+                                   type="number"
+                                   className="w-full text-xs font-mono font-bold text-blue-400 bg-transparent outline-none"
+                                   value={entry.adjRw}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'adjRw', parseFloat(e.target.value))}
+                                />
+                             </td>
+
+                             {/* LOS */}
+                             <td className={clsx("px-4 py-2 border-l border-slate-700", entry.validationMsg && "bg-amber-500/20")}>
+                                <div className="flex flex-col">
+                                    <input 
+                                        type="number"
+                                        className="w-full text-xs font-mono font-bold text-white bg-transparent outline-none"
+                                        value={entry.los}
+                                        onChange={(e) => handleTableCellChange(entry.id, 'los', parseFloat(e.target.value))}
+                                    />
+                                    {entry.validationMsg && (
+                                        <span className="text-[9px] text-amber-400 leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px]" title={entry.validationMsg}>
+                                            ⚠ {entry.validationMsg}
+                                        </span>
+                                    )}
+                                </div>
+                             </td>
+
+                             {/* Notes */}
+                             <td className="px-4 py-2 border-l border-slate-700">
+                                <input 
+                                   className="w-full text-xs text-slate-400 bg-transparent outline-none italic"
+                                   placeholder="Add notes..."
+                                   value={entry.notes}
+                                   onChange={(e) => handleTableCellChange(entry.id, 'notes', e.target.value)}
+                                />
+                             </td>
+
+                             {/* Action */}
+                             <td className="px-4 py-2 border-l border-slate-700 text-center">
+                                <button
+                                    onClick={() => setEntries(entries.filter(e => e.id !== entry.id))}
+                                    className="p-1 text-slate-500 hover:text-red-500 hover:bg-red-500/20 rounded transition-colors"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                             </td>
+                          </tr>
+                       ))}
+                       {entries.length === 0 && (
+                           <tr>
+                               <td colSpan={10} className="py-12 text-center text-slate-500 text-sm">
+                                   No entries. Use the panel above or click "Add Row" to start.
+                               </td>
+                           </tr>
+                       )}
+                    </tbody>
+                 </table>
+              </div>
+              <div className="bg-slate-700/30 px-4 py-2 border-t border-slate-700/50 flex justify-between items-center">
+                  <span className="text-xs text-slate-400">
+                      {entries.length} {entries.length === 1 ? 'row' : 'rows'}
+                  </span>
+                  <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                      <span className="text-[10px] text-slate-400">Validation Warning</span>
+                      <span className="w-2 h-2 rounded-full bg-red-400 ml-2"></span>
+                      <span className="text-[10px] text-slate-400">Error / Missing Field</span>
+                  </div>
+              </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};

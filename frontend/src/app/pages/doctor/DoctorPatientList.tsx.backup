@@ -1,0 +1,471 @@
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { 
+  Search, 
+  Filter, 
+  Calendar, 
+  Users, 
+  ArrowRight, 
+  FileText, 
+  Clock, 
+  Brain, 
+  CheckCircle, 
+  AlertCircle,
+  MoreVertical,
+  ChevronDown,
+  Eye,
+  Sparkles,
+  Activity,
+  Loader2
+} from 'lucide-react';
+import { clsx } from 'clsx';
+import { AppointmentDetailModal } from '../../components/doctor/AppointmentDetailModal';
+import { motion, AnimatePresence } from 'motion/react';
+import { useData } from '../../context/DataContext';
+import type { PatientRecord } from '../../context/DataContext';
+
+// --- Types ---
+
+interface Patient {
+  id: string;
+  name: string;
+  mrn: string;
+  age: number;
+  gender: 'M' | 'F';
+  visitDate: string;
+  department: string;
+  notesStatus: 'Draft' | 'In Progress' | 'Completed';
+  aiScore: number;
+  aiStatus: 'High Confidence' | 'AI Ready' | 'Needs Details';
+  aiTooltip: string;
+  lastVisitSummary: string;
+  keyDiagnosis: string;
+}
+
+// Helper function to map PatientRecord to Patient interface
+const mapRecordToPatient = (record: PatientRecord): Patient => {
+  // Calculate AI score based on code confidence and completeness
+  const avgConfidence = record.codes.length > 0 
+    ? record.codes.reduce((sum, c) => sum + c.confidence, 0) / record.codes.length
+    : 0;
+  const aiScore = Math.round(avgConfidence * 100);
+  
+  // Determine AI status
+  let aiStatus: Patient['aiStatus'];
+  let aiTooltip: string;
+  
+  if (aiScore >= 90) {
+    aiStatus = 'High Confidence';
+    aiTooltip = 'Documentation is strong. Ready for review.';
+  } else if (aiScore >= 75) {
+    aiStatus = 'AI Ready';
+    aiTooltip = 'Good documentation. Consider adding more details.';
+  } else {
+    aiStatus = 'Needs Details';
+    aiTooltip = 'Add more clinical details to improve coding quality.';
+  }
+  
+  // Determine notes status based on record status
+  let notesStatus: Patient['notesStatus'];
+  if (record.status === 'COMPLETED') {
+    notesStatus = 'Completed';
+  } else if (record.status === 'IN_REVIEW' || record.codes.length > 0) {
+    notesStatus = 'In Progress';
+  } else {
+    notesStatus = 'Draft';
+  }
+  
+  // Extract age and gender from original data if available
+  const age = record.originalData?.age || Math.floor(Math.random() * 60) + 20;
+  const gender: 'M' | 'F' = record.originalData?.sex === 'M' ? 'M' : 'F';
+  
+  // Get first diagnosis as key diagnosis
+  const keyDiagnosis = record.codes.find(c => c.type === 'ICD-10')?.description || 'Diagnosis pending';
+  
+  return {
+    id: record.id,
+    name: record.patientName,
+    mrn: record.mrn,
+    age,
+    gender,
+    visitDate: format(new Date(record.dateOfService), 'MMM d, yyyy'),
+    department: record.department,
+    notesStatus,
+    aiScore,
+    aiStatus,
+    aiTooltip,
+    lastVisitSummary: record.clinicalNote.split('\n\n')[0] || 'No visit summary available.',
+    keyDiagnosis,
+  };
+};
+
+export const DoctorPatientList = () => {
+  const navigate = useNavigate();
+  const { records, loading, error } = useData();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState('Today');
+  const [deptFilter, setDeptFilter] = useState('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [viewingPatient, setViewingPatient] = useState<Patient | null>(null);
+
+  // Map records to Patient interface
+  const allPatients = useMemo(() => {
+    return records.map(mapRecordToPatient);
+  }, [records]);
+
+  // Filter Logic
+  const filteredPatients = useMemo(() => {
+    return allPatients.filter(p => {
+      const matchesSearch = 
+        p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        p.mrn.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesDept = deptFilter === 'All' || p.department === deptFilter;
+      const matchesStatus = statusFilter === 'All' || p.notesStatus === statusFilter;
+      // Date filter would be implemented here in a real app
+      return matchesSearch && matchesDept && matchesStatus;
+    });
+  }, [allPatients, searchTerm, deptFilter, statusFilter]);
+
+  const selectedPatient = allPatients.find(p => p.id === selectedPatientId);
+
+  // Helper for Status Colors
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Completed': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+      case 'In Progress': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      default: return 'bg-slate-700/50 text-slate-400 border-slate-600';
+    }
+  };
+
+  // Helper for AI Score Color
+  const getAiScoreColor = (score: number) => {
+    if (score >= 90) return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'; // Green
+    if (score >= 75) return 'text-amber-400 bg-amber-500/10 border-amber-500/20'; // Yellow
+    return 'text-orange-400 bg-orange-500/10 border-orange-500/20'; // Orange
+  };
+
+  const getAiScoreBarColor = (score: number) => {
+    if (score >= 90) return 'bg-emerald-400 shadow-[0_0_10px_#34d399]';
+    if (score >= 75) return 'bg-amber-400';
+    return 'bg-orange-400';
+  };
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <Loader2 className="animate-spin text-teal-500 mb-4" size={48} />
+        <p className="text-sm text-slate-400">Loading patient list...</p>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh]">
+        <AlertCircle className="text-red-500 mb-4" size={48} />
+        <p className="text-lg font-semibold text-white mb-2">Failed to load patient list</p>
+        <p className="text-sm text-slate-400 mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-500 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-[calc(100vh-8rem)] gap-6 animate-fade-in font-sans">
+      
+      {/* Main Content: Patient List */}
+      <div className="flex-1 flex flex-col bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-lg overflow-hidden">
+        
+        {/* Header Section */}
+        <div className="p-6 border-b border-slate-700/50 bg-slate-800/50">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-xl font-bold text-white">My Patients</h1>
+              <p className="text-slate-400 text-sm mt-1">Patients assigned to you for documentation review.</p>
+            </div>
+            
+            {/* Quick Date Filter */}
+            <div className="flex items-center gap-2">
+               <div className="flex bg-slate-900 p-1 rounded-lg border border-slate-700">
+                 {['Today', 'This Week', 'Custom'].map(filter => (
+                   <button
+                     key={filter}
+                     onClick={() => setDateFilter(filter)}
+                     className={clsx(
+                       "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
+                       dateFilter === filter ? "bg-slate-700 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
+                     )}
+                   >
+                     {filter}
+                   </button>
+                 ))}
+               </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search */}
+            <div className="relative w-full md:w-96">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-500" size={16} />
+              <input
+                type="text"
+                placeholder="Search by Patient Name or MRN..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 text-sm placeholder-slate-600 transition-all"
+              />
+            </div>
+            
+            {/* Dropdown Filters */}
+            <div className="flex items-center gap-3 w-full md:w-auto">
+               <button className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors">
+                 <Filter size={16} />
+                 <span>Department</span>
+                 <ChevronDown size={14} className="text-slate-500" />
+               </button>
+               <button className="flex items-center gap-2 px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-slate-300 hover:bg-slate-800 transition-colors">
+                 <CheckCircle size={16} />
+                 <span>Status</span>
+                 <ChevronDown size={14} className="text-slate-500" />
+               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="flex-1 overflow-auto scrollbar-thin scrollbar-thumb-slate-700">
+          <table className="w-full text-left border-collapse">
+            <thead className="bg-slate-900/80 border-b border-slate-700 sticky top-0 z-10 backdrop-blur-md">
+              <tr>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Patient / MRN</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Demographics</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Visit</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Notes Status</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">AI Quality</th>
+                <th className="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-700/30">
+              {filteredPatients.length > 0 ? (
+                filteredPatients.map((patient) => (
+                  <tr 
+                    key={patient.id} 
+                    onClick={() => setSelectedPatientId(patient.id)}
+                    className={clsx(
+                      "hover:bg-slate-700/30 transition-colors cursor-pointer group",
+                      selectedPatientId === patient.id ? "bg-slate-700/50" : ""
+                    )}
+                  >
+                    <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-slate-800 text-teal-400 flex items-center justify-center font-bold text-sm border border-slate-700 shadow-sm">
+                                {patient.name.charAt(0)}
+                            </div>
+                            <div>
+                                <p className="font-semibold text-sm text-slate-200 group-hover:text-white transition-colors">{patient.name}</p>
+                                <p className="text-xs text-slate-500 font-mono">{patient.mrn}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-400">
+                        {patient.age} yrs • {patient.gender}
+                    </td>
+                    <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                            <span className="text-sm text-slate-300 font-medium">{patient.department}</span>
+                            <span className="text-xs text-slate-500">{patient.visitDate}</span>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={clsx(
+                          "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border",
+                          getStatusColor(patient.notesStatus)
+                      )}>
+                        {patient.notesStatus}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1.5" title={patient.aiTooltip}>
+                            <div className="flex items-center gap-2">
+                                <div className="flex-1 w-20 bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                                    <div 
+                                        className={clsx("h-full rounded-full transition-all duration-500", getAiScoreBarColor(patient.aiScore))}
+                                        style={{ width: `${patient.aiScore}%` }}
+                                    ></div>
+                                </div>
+                                <span className="text-xs font-bold text-slate-300">{patient.aiScore}%</span>
+                            </div>
+                            <span className={clsx(
+                                "text-[10px] px-2 py-0.5 rounded-md border w-fit font-bold flex items-center gap-1",
+                                getAiScoreColor(patient.aiScore)
+                            )}>
+                                {patient.aiScore < 75 && <AlertCircle size={10} />}
+                                {patient.aiStatus}
+                            </span>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingPatient(patient);
+                                    setIsAppointmentModalOpen(true);
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-colors"
+                                title="View Appointment Details"
+                            >
+                                <Eye size={16} />
+                            </button>
+                            <button 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/doctor/notes');
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-600 text-white text-xs font-bold rounded-lg hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-all"
+                                title="Write Notes"
+                            >
+                                <FileText size={14} />
+                                Notes
+                            </button>
+                            <button 
+                                className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                                title="AI Insights"
+                            >
+                                <Brain size={16} />
+                            </button>
+                        </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                        <div className="flex flex-col items-center gap-2">
+                            <Users size={32} className="text-slate-600" />
+                            <p>No patients found matching your filters.</p>
+                        </div>
+                    </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Right Panel: Quick Patient Summary */}
+      <AnimatePresence>
+        {selectedPatient && (
+            <motion.aside 
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 320, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-xl flex flex-col flex-shrink-0 overflow-hidden h-full"
+            >
+                <div className="p-5 border-b border-slate-700/50 bg-slate-900/50">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-800 text-teal-400 flex items-center justify-center font-bold text-lg border border-slate-700 shadow-sm">
+                            {selectedPatient.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-white leading-tight">{selectedPatient.name}</h2>
+                            <p className="text-xs text-slate-400 mt-0.5">{selectedPatient.age} yrs • {selectedPatient.gender} • {selectedPatient.department}</p>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        onClick={() => navigate('/doctor/notes')}
+                        className="w-full bg-teal-600 text-white text-sm font-bold py-2.5 rounded-lg hover:bg-teal-500 shadow-lg shadow-teal-900/20 transition-all flex items-center justify-center gap-2 mb-2"
+                    >
+                        <FileText size={16} />
+                        Continue Notes
+                    </button>
+                    <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+                        <Clock size={12} />
+                        Last updated today
+                    </div>
+                </div>
+
+                <div className="p-5 space-y-6 overflow-y-auto flex-1 scrollbar-thin scrollbar-thumb-slate-700">
+                    {/* 1. Visit Summary */}
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <FileText size={14} />
+                            Latest Visit Summary
+                        </h3>
+                        <p className="text-sm text-slate-300 leading-relaxed bg-slate-900/50 p-3 rounded-lg border border-slate-700/50">
+                            {selectedPatient.lastVisitSummary}
+                        </p>
+                    </div>
+
+                    {/* 2. Key Diagnosis */}
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                            <CheckCircle size={14} />
+                            Key Diagnosis
+                        </h3>
+                        <div className="text-sm font-medium text-blue-300 bg-blue-500/10 px-3 py-2 rounded-lg border border-blue-500/20 inline-block shadow-[0_0_10px_rgba(59,130,246,0.1)]">
+                            {selectedPatient.keyDiagnosis}
+                        </div>
+                    </div>
+
+                    {/* 3. AI Insights */}
+                    <div>
+                        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <Brain size={14} className="text-teal-500" />
+                            AI Documentation Insights
+                        </h3>
+                        
+                        {selectedPatient.aiScore < 90 ? (
+                            <div className="space-y-3">
+                                <div className="flex gap-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                                    <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-xs font-bold text-amber-400 mb-1">Attention Needed</p>
+                                        <p className="text-xs text-amber-200/80 leading-snug">
+                                            {selectedPatient.aiTooltip}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-700/50">
+                                    <span>Completeness Score</span>
+                                    <span className="font-bold text-amber-500">{selectedPatient.aiScore}%</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-2 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-sm shadow-[0_0_10px_rgba(16,185,129,0.1)]">
+                                    <Sparkles size={16} />
+                                    <span>Documentation is comprehensive.</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-700/50">
+                                    <span>Completeness Score</span>
+                                    <span className="font-bold text-emerald-500">{selectedPatient.aiScore}%</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <AppointmentDetailModal 
+        isOpen={isAppointmentModalOpen}
+        onClose={() => setIsAppointmentModalOpen(false)}
+        patient={viewingPatient}
+      />
+
+    </div>
+  );
+};

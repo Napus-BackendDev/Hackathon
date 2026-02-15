@@ -1,0 +1,246 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useData, Code } from '../../context/DataContext';
+import { 
+  ArrowLeft, 
+  Save, 
+  FileText, 
+  CheckCircle, 
+  AlertCircle, 
+  History, 
+  Brain, 
+  Sparkles,
+  Search,
+  Plus
+} from 'lucide-react';
+import { toast } from 'sonner';
+
+export const DoctorPatientDetail = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { records, updateRecordCodes, addAuditLog } = useData();
+  
+  const [record, setRecord] = useState(records.find(r => r.id === id));
+  const [note, setNote] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState<'coding' | 'history'>('coding');
+
+  useEffect(() => {
+    if (record) {
+      setNote(record.clinicalNote);
+    }
+  }, [record]);
+
+  if (!record) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-slate-400">
+        <AlertCircle size={48} className="mb-4 text-slate-400" />
+        <h2 className="text-xl font-semibold text-slate-300">Patient Record Not Found</h2>
+        <button 
+          onClick={() => navigate('/doctor/dashboard')}
+          className="mt-4 px-4 py-2 text-sm text-teal-600 hover:underline"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    );
+  }
+
+  const handleSaveNote = () => {
+    // In a real app, this would update the record
+    setIsEditing(false);
+    toast.success('Clinical note updated successfully');
+    addAuditLog({
+      user: 'Dr. User',
+      role: 'DOCTOR',
+      action: 'Update Note',
+      details: `Updated clinical note for ${record.mrn}`
+    });
+  };
+
+  const getConfidenceColor = (score: number) => {
+    if (score >= 0.9) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (score >= 0.7) return 'bg-amber-100 text-amber-700 border-amber-200';
+    return 'bg-red-100 text-red-700 border-red-200';
+  };
+
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => navigate(-1)}
+            className="p-2 text-slate-500 hover:text-slate-400 hover:bg-slate-700/50 rounded-lg transition-colors"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-white">{record.patientName}</h1>
+            <div className="flex items-center gap-3 text-sm text-slate-400 mt-1">
+              <span className="font-mono bg-slate-700/50 px-2 py-0.5 rounded text-slate-400 border border-slate-700/50">{record.mrn}</span>
+              <span>•</span>
+              <span>{record.dateOfService}</span>
+              <span>•</span>
+              <span className="text-teal-600 font-medium">{record.department}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-teal-50 border border-teal-100 rounded-full text-sm text-teal-700">
+            <Sparkles size={14} />
+            <span className="font-medium">AI Analysis Active</span>
+          </div>
+          <button 
+            onClick={handleSaveNote}
+            className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 shadow-sm transition-colors"
+          >
+            <Save size={18} />
+            <span>Save Changes</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Clinical Note */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-sm border border-slate-700/50 overflow-hidden flex flex-col h-[calc(100vh-12rem)]">
+            <div className="px-6 py-4 border-b border-slate-700/50 flex items-center justify-between bg-slate-700/30">
+              <div className="flex items-center gap-2">
+                <FileText className="text-slate-500" size={18} />
+                <h2 className="font-semibold text-white">Clinical Documentation</h2>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-slate-400">Last edited: Today, 10:42 AM</span>
+              </div>
+            </div>
+            
+            <div className="flex-1 p-6 bg-slate-800/50 backdrop-blur-sm overflow-y-auto">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                className="w-full h-full p-4 text-slate-300 leading-relaxed border-0 focus:ring-0 resize-none outline-none font-sans text-base"
+                placeholder="Enter clinical notes here..."
+              />
+            </div>
+            
+            <div className="px-6 py-3 bg-slate-700/30 border-t border-slate-700/50 flex justify-between items-center text-sm">
+              <span className="text-slate-400">{note.length} characters</span>
+              <div className="flex items-center gap-2 text-teal-600">
+                <CheckCircle size={14} />
+                <span>All changes saved</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: AI Analysis & Tools */}
+        <div className="space-y-6">
+          <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl shadow-sm border border-slate-700/50 overflow-hidden">
+            <div className="flex border-b border-slate-700/50">
+              <button
+                onClick={() => setActiveTab('coding')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'coding' 
+                    ? 'border-teal-500 text-teal-700 bg-teal-50/50' 
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <Brain size={16} />
+                  AI Suggestions
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`flex-1 px-4 py-3 text-sm font-medium transition-colors border-b-2 ${
+                  activeTab === 'history' 
+                    ? 'border-teal-500 text-teal-700 bg-teal-50/50' 
+                    : 'border-transparent text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <History size={16} />
+                  Audit Log
+                </div>
+              </button>
+            </div>
+
+            {activeTab === 'coding' ? (
+              <div className="p-4 space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Detected Codes</h3>
+                  <button className="text-teal-600 hover:text-teal-700 text-xs font-medium flex items-center gap-1">
+                    <Plus size={14} />
+                    Add Code
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {record.codes.map((code, idx) => (
+                    <div key={idx} className="group p-3 rounded-lg border border-slate-700/50 hover:border-teal-200 hover:shadow-sm transition-all bg-slate-800/50 backdrop-blur-sm">
+                      <div className="flex justify-between items-start mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+                            code.type === 'ICD-10' ? 'bg-blue-50 text-blue-700 border border-blue-100' : 'bg-purple-50 text-purple-700 border border-purple-100'
+                          }`}>
+                            {code.type}
+                          </span>
+                          <span className="font-mono font-bold text-white">{code.code}</span>
+                        </div>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${getConfidenceColor(code.confidence)}`}>
+                          {(code.confidence * 100).toFixed(0)}% Match
+                        </span>
+                      </div>
+                      <p className="text-sm text-slate-400 mb-3">{code.description}</p>
+                      
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-700 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button className="flex-1 py-1 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors">
+                          Accept
+                        </button>
+                        <button className="flex-1 py-1 text-xs font-medium text-slate-400 bg-slate-700/30 hover:bg-slate-700/50 rounded transition-colors">
+                          Edit
+                        </button>
+                        <button className="p-1 text-slate-500 hover:text-red-500 hover:bg-red-50 rounded transition-colors">
+                          <AlertCircle size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 p-4 bg-slate-700/30 rounded-lg border border-slate-700">
+                  <h4 className="text-sm font-semibold text-white mb-2">Documentation Gaps</h4>
+                  <ul className="space-y-2">
+                    <li className="flex items-start gap-2 text-sm text-slate-400">
+                      <AlertCircle size={14} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                      <span>Missing laterality for fracture diagnosis.</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-slate-400">
+                      <AlertCircle size={14} className="mt-0.5 text-amber-500 flex-shrink-0" />
+                      <span>Specify "Initial" vs "Subsequent" encounter.</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="p-0">
+                <div className="divide-y divide-gray-100">
+                  {[1, 2, 3].map((_, i) => (
+                    <div key={i} className="p-4 hover:bg-slate-700/30 transition-colors">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-xs font-medium text-white">Dr. User</span>
+                        <span className="text-xs text-slate-500">2h ago</span>
+                      </div>
+                      <p className="text-sm text-slate-400">Updated clinical note details regarding patient history.</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
